@@ -74,7 +74,7 @@ public:
 	void setGlobalValue(const std::string &name, const T& value) {
 		assert(JITStarted && "JIT has not started!");
 		JITTargetAddress addr = gvAddrs[name];
-		if (!addr) addr = gvAddrs[name] = ExitOnErr(JITInstance->lookup(name)).getAddress();
+		if (!addr) addr = gvAddrs[name] = ExitOnErr(JITInstance->lookup(name)).getValue();
 		*(T*)(addr) = value;
 	}
 
