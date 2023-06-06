@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(GLSLPipeline)
+project(CppRenderPipeline)
 
 # LLVM Part
 
@@ -20,13 +20,13 @@ else()
 endif()
 
 # Main part
-add_executable(GLSLPipeline
+add_executable(CppRenderPipeline
     src/jit.cpp
     src/main.cpp
 )
-target_include_directories(GLSLPipeline
+target_include_directories(CppRenderPipeline
     PUBLIC include
 )
-target_link_libraries(GLSLPipeline
+target_link_libraries(CppRenderPipeline
     PUBLIC ${llvm_libs}
 )
