@@ -1,6 +1,7 @@
 #include <algorithm>
-#include <fstream>
+#include <cmath>
 #include <cstring>
+#include <fstream>
 #include <vector>
 #include "jit.h"
 
@@ -140,7 +141,7 @@ void renderLine(Image &image, const Fragment &frag, float l, float r, int y)
 {
 	if (l > r)
 		std::swap(l, r);
-	for (int i = std::max(0.0f, ceil(l)); i <= std::min(float(image.width() - 1), floor(r)); i++)
+	for (int i = std::max(0.0f, ceilf(l)); i <= std::min(float(image.width() - 1), floorf(r)); i++)
 		renderPixel(image, frag, i, y);
 }
 
