@@ -37,7 +37,10 @@ public:
         int base_loc = y * width() * channel() + x * channel();
         for (int i = 0; i < channel(); i++)
         {
-            data[base_loc + i] = int(color[i] * 255);
+            float res = color[i];
+            if (res > 1) res = 1;
+            if (res < 0) res = 0;
+            data[base_loc + i] = int(res * 255 + 0.5);
         }
         return true;
     }
