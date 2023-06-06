@@ -28,6 +28,12 @@ public:
 
     bool setPixel(int x, int y, std::vector<float> color)
     {
+		float alpha = 1;
+		if (color.size() >= 4) {
+            alpha = color[3];
+            if (alpha > 1) alpha = 1;
+            if (alpha < 0) alpha = 0;
+        } 
         if (x < 0 || x >= width())
             return false;
         if (y < 0 || y >= height())
@@ -40,7 +46,7 @@ public:
             float res = color[i];
             if (res > 1) res = 1;
             if (res < 0) res = 0;
-            data[base_loc + i] = int(res * 255 + 0.5);
+            data[base_loc + i] = int(res * 255 + 0.5) * alpha + data[base_loc + i] * (1 - alpha);
         }
         return true;
     }
@@ -88,17 +94,64 @@ void renderLine(Image &image, int l, int r, int y)
         renderPixel(image, i, y);
 }
 
-void renderTriangle(Image &image)
+void renderUpTriangle(Image &image, int tx, int ty, float llx, float lrx, int ly)
 {
-    float xl = 64, xm = 256, xr = 448;
-    int yu = 69, yd = 443;
-    float curxl = xm, curxr = xm;
-    float dx = (xm - xl) / (yd - yu);
-    for (int i = yu; i <= yd; i++) {
-        renderLine(image, int(curxl + 0.5f), int(curxr + 0.5f), i);
-        curxl -= dx;
-        curxr += dx;
-    }
+	float curxl = tx, curxr = tx;
+	float ldx = (llx - tx) / (ly - ty);
+	float rdx = (lrx - tx) / (ly - ty);
+	for (int i = ty; i <= ly; i++) {
+		renderLine(image, int(curxl + 0.5f), int(curxr + 0.5f), i);
+		curxl += ldx;
+		curxr += rdx;
+	}
+}
+
+void renderDownTriangle(Image &image, int tx, int ty, float llx, float lrx, int ly)
+{
+	float curxl = tx, curxr = tx;
+	float ldx = (llx - tx) / (ly - ty);
+	float rdx = (lrx - tx) / (ly - ty);
+	for (int i = ty; i >= ly; i--) {
+		renderLine(image, int(curxl + 0.5f), int(curxr + 0.5f), i);
+		curxl -= ldx;
+		curxr -= rdx;
+	}
+}
+
+void renderTriangle(Image &image, int ax, int ay, int bx, int by, int cx, int cy)
+{
+	std::vector<std::pair<int, int>> points;
+	points.push_back(std::make_pair(ax, ay));
+	points.push_back(std::make_pair(bx, by));
+	points.push_back(std::make_pair(cx, cy));
+	sort(points, [](std::pair<int, int> a, std::pair<int, int> b) {
+		return a.second == b.second ? a.first < b.first : a.second < b.second;
+		});
+	if (points[1].second == points[0].second) {
+		renderDownTriangle(image, points[2].first, points[2].second, points[0].first, points[1].first, points[1].second);
+	}
+	else if (points[1].second == points[2].second) {
+		renderUpTriangle(image, points[0].first, points[0].second, points[2].first, points[1].first, points[1].second);
+	}
+	else {
+		int dx = points[2].first - points[0].first, dy = points[2].second - points[0].second;
+		float k = float(dx) / dy;
+		float midx = points[0].first + k * (points[1].second - points[0].second);
+		renderDownTriangle(image, points[2].first, points[2].second, 
+			std::min(midx, float(points[1].first)), std::max(midx, float(points[1].first)), points[1].second);
+		renderUpTriangle(image, points[0].first, points[0].second,
+			std::min(midx, float(points[1].first)), std::max(midx, float(points[1].first)), points[1].second);
+	}
+}
+
+void renderTriangle(Image &image, std::vector<std::vector<float>> v) {
+	for (int i = 0; i <= v.size() - 3; i++) {
+		renderTriangle(image, 
+			v[i + 0][0], v[i + 0][1], 
+			v[i + 1][0], v[i + 1][1],
+			v[i + 2][0], v[i + 2][1]
+		);
+	}
 }
 
 void prepare(){
@@ -120,7 +173,16 @@ int main(int argc, const char **argv)
 	INIT_LLVM();
     prepare();
     Image image(512, 512);
-    renderTriangle(image);
+	std::vector<std::vector<float>> points = {
+		{ 256, 69, 0 },
+		{ 64, 443, 0 },
+		{ 448, 443, 0 },
+	};
+	std::vector<std::vector<float>> tPoints;
+	for (std::vector<float> &i : points) {
+		tPoints.push_back(vertShader(i));
+	}
+    renderTriangle(image, tPoints);
     std::ofstream fout("result.ppm", std::ios::binary);
     image.dump(fout);
     fout.close();

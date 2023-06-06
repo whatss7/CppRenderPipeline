@@ -20,6 +20,7 @@ else()
 endif()
 
 # Main part
+add_compile_options(-fno-rtti)
 add_executable(CppRenderPipeline
     src/jit.cpp
     src/main.cpp
