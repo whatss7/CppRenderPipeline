@@ -102,8 +102,8 @@ void prepare(){
 	helper = new JITHelper();
 	LLVMContext &C = helper->getContext();
 	Type *floatTy = Type::getFloatTy(C);
-	helper->addIRFile(vertPath, "vert_");
-	helper->addIRFile(fragPath, "frag_");
+	ExitOnErr(helper->addIRFile(vertPath, "vert_"));
+	ExitOnErr(helper->addIRFile(fragPath, "frag_"));
 	helper->addVector("aPos", floatTy, 3);
 	helper->addVector("FragColor", floatTy, 4);
 	helper->addVector("gl_Position", floatTy, 4);
@@ -114,7 +114,7 @@ void prepare(){
 
 int main(int argc, const char **argv)
 {
-	INIT_LLVM(argc, argv);
+	INIT_LLVM();
     prepare();
     Image image(512, 512);
     renderTriangle(image);
