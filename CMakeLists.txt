@@ -21,6 +21,7 @@ endif()
 
 # Main part
 add_compile_options(-fno-rtti)
+add_definitions(-DCRPEXT_DIR=\"${CMAKE_SOURCE_DIR}/external/\")
 add_executable(CppRenderPipeline
     src/jit.cpp
     src/main.cpp

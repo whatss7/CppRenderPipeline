@@ -66,50 +66,58 @@ JITHelper *fragHelper = nullptr;
 void (*vertShaderImpl)() = nullptr;
 void (*fragShaderImpl)() = nullptr;
 
-struct VertexInfo {
-	std::vector<float> gl_Position;
+struct SharedInfo {
 	std::vector<float> color;
-	VertexInfo() {}
-	VertexInfo(std::vector<float> gl_Position, std::vector<float> color) : gl_Position(gl_Position), color(color) {}
+	std::vector<float> texCoord;
+	SharedInfo() {}
+	SharedInfo(std::vector<float> color, std::vector<float> texCoord) : color(color), texCoord(texCoord) {}
 };
 
-VertexInfo vertShader(const std::vector<float> &point)
+std::pair<SharedInfo, std::vector<float>> vertShader(const std::vector<float> &point)
 {
 	vertHelper->setVector<float>("aPos", point);
 	vertHelper->setVector<float>("color", { 0.0, 0.0, 0.0, 0.0 });
+	vertHelper->setVector<float>("texCoord", { 0.0, 0.0, 0.0, 0.0 });
 	vertHelper->setVector<float>("gl_Position", { 0.0, 0.0, 0.0, 0.0 });
 	vertShaderImpl();
-	return VertexInfo(vertHelper->getVector<float>("gl_Position"), vertHelper->getVector<float>("color"));
+	return std::make_pair(
+		SharedInfo(vertHelper->getVector<float>("color"), vertHelper->getVector<float>("texCoord")),
+		vertHelper->getVector<float>("gl_Position")
+	);
 }
 
-std::vector<float> fragShader(const std::vector<float> &color)
+std::vector<float> fragShader(SharedInfo info)
 {
-	fragHelper->setVector<float>("color", color);
+	fragHelper->setVector<float>("color", info.color);
+	fragHelper->setVector<float>("texCoord", info.texCoord);
 	fragHelper->setVector<float>("FragColor", { 0.0, 0.0, 0.0, 0.0 });
 	fragShaderImpl();
 	return fragHelper->getVector<float>("FragColor");
 }
 
 struct Fragment {
-	VertexInfo ainfo, binfo, cinfo;
-	float ax() const { return ainfo.gl_Position[0]; }
-	float ay() const { return ainfo.gl_Position[1]; }
-	float bx() const { return binfo.gl_Position[0]; }
-	float by() const { return binfo.gl_Position[1]; }
-	float cx() const { return cinfo.gl_Position[0]; }
-	float cy() const { return cinfo.gl_Position[1]; }
+	SharedInfo ainfo, binfo, cinfo;
+	std::vector<float> aPos, bPos, cPos;
+	float ax() const { return aPos[0]; }
+	float ay() const { return aPos[1]; }
+	float bx() const { return bPos[0]; }
+	float by() const { return bPos[1]; }
+	float cx() const { return cPos[0]; }
+	float cy() const { return cPos[1]; }
 };
 
 Fragment getFragment(const std::vector<std::vector<float>> &points, unsigned offset = 0) {
-	auto runOnPoint = [&points](unsigned index) {
+	auto runOnPoint = [&points](unsigned index, SharedInfo &info, std::vector<float> &pos) {
 		std::vector<float> v = points[index];
 		while (v.size() < 3) v.push_back(0.0);
-		return vertShader(v);
+		auto res = vertShader(v);
+		info = res.first;
+		pos = res.second;
 	};
 	Fragment frag;
-	frag.ainfo = runOnPoint(offset + 0);
-	frag.binfo = runOnPoint(offset + 1);
-	frag.cinfo = runOnPoint(offset + 2);
+	runOnPoint(offset + 0, frag.ainfo, frag.aPos);
+	runOnPoint(offset + 1, frag.binfo, frag.bPos);
+	runOnPoint(offset + 2, frag.cinfo, frag.cPos);
 	return frag;
 }
 
@@ -119,21 +127,37 @@ float getarea(float ax, float ay, float bx, float by, float cx, float cy) {
 
 void renderPixel(Image &image, const Fragment &frag, int x, int y)
 {
-	std::vector<float> color;
-	float area = getarea(frag.ax(), frag.ay(), frag.bx(), frag.by(), frag.cx(), frag.cy());
-	if (area < 1e-8) color = frag.ainfo.color;
+	std::vector<float> color, texCoord;
+	auto tx = [&image](float x) { return (x + 1) / 2 * image.width(); };
+	auto ty = [&image](float y) { return (y + 1) / 2 * image.height(); };
+	float ax = tx(frag.ax()), ay = ty(frag.ay());
+	float bx = tx(frag.bx()), by = ty(frag.by());
+	float cx = tx(frag.cx()), cy = ty(frag.cy());
+	float area = getarea(ax, ay, bx, by, cx, cy);
+	if (area < 1e-8) {
+		color = frag.ainfo.color;
+		texCoord = frag.ainfo.texCoord;
+	}
 	else {
-		float aw = getarea(x, y, frag.bx(), frag.by(), frag.cx(), frag.cy()) / area;
-		float bw = getarea(frag.ax(), frag.ay(), x, y, frag.cx(), frag.cy()) / area;
-		float cw = getarea(frag.ax(), frag.ay(), frag.bx(), frag.by(), x, y) / area;
+		float aw = getarea(x, y, bx, by, cx, cy);
+		float bw = getarea(ax, ay, x, y, cx, cy);
+		float cw = getarea(ax, ay, bx, by, x, y);
+		float sum = aw + bw + cw;
+		aw /= sum;
+		bw /= sum;
+		cw /= sum;
 		for (int i = 0; i < 4; i++) {
 			color.push_back(0.0);
 			color[i] += aw * frag.ainfo.color[i];
 			color[i] += bw * frag.binfo.color[i];
 			color[i] += cw * frag.cinfo.color[i];
+			texCoord.push_back(0.0);
+			texCoord[i] += aw * frag.ainfo.texCoord[i];
+			texCoord[i] += bw * frag.binfo.texCoord[i];
+			texCoord[i] += cw * frag.cinfo.texCoord[i];
 		}
 	}
-	color = fragShader(color);
+	color = fragShader(SharedInfo(color, texCoord));
 	image.setPixel(x, y, color);
 }
 
@@ -141,7 +165,7 @@ void renderLine(Image &image, const Fragment &frag, float l, float r, int y)
 {
 	if (l > r)
 		std::swap(l, r);
-	for (int i = std::max(0.0f, ceilf(l)); i <= std::min(float(image.width() - 1), floorf(r)); i++)
+	for (int i = std::max(0.0f, ceilf(l)); i < std::min(float(image.width() - 1), floorf(r)); i++)
 		renderPixel(image, frag, i, y);
 }
 
@@ -153,8 +177,8 @@ void renderUpTriangle(Image &image, const Fragment &frag, float tx, float ty, fl
 	int init_i = ceil(ty);
 	curxl += (init_i - ty) * ldx;
 	curxr += (init_i - ty) * rdx;
-	for (int i = ty; i <= ly; i++) {
-		renderLine(image, frag, int(curxl + 0.5f), int(curxr + 0.5f), i);
+	for (int i = ty; i < ly; i++) {
+		renderLine(image, frag, curxl, curxr, i);
 		curxl += ldx;
 		curxr += rdx;
 	}
@@ -168,7 +192,7 @@ void renderDownTriangle(Image &image, const Fragment &frag, float tx, float ty, 
 	int init_i = ceil(ty);
 	curxl += (init_i - ty) * ldx;
 	curxr += (init_i - ty) * rdx;
-	for (int i = ty; i <= ly; i++) {
+	for (int i = ly; i < ty; i++) {
 		renderLine(image, frag, int(curxl + 0.5f), int(curxr + 0.5f), i);
 		curxl += ldx;
 		curxr += rdx;
@@ -177,9 +201,11 @@ void renderDownTriangle(Image &image, const Fragment &frag, float tx, float ty, 
 
 void renderTriangle(Image &image, const Fragment &frag)
 {
-	float ax = frag.ax(), ay = frag.ay();
-	float bx = frag.bx(), by = frag.by();
-	float cx = frag.cx(), cy = frag.cy();
+	auto tx = [&image](float x) { return (x + 1) / 2 * image.width(); };
+	auto ty = [&image](float y) { return (y + 1) / 2 * image.height(); };
+	float ax = tx(frag.ax()), ay = ty(frag.ay());
+	float bx = tx(frag.bx()), by = ty(frag.by());
+	float cx = tx(frag.cx()), cy = ty(frag.cy());
 
 	std::vector<std::pair<float, float>> points;
 
@@ -193,7 +219,7 @@ void renderTriangle(Image &image, const Fragment &frag)
 		renderDownTriangle(image, frag, points[2].first, points[2].second, points[0].first, points[1].first, points[1].second);
 	}
 	else if (points[1].second == points[2].second) {
-		renderUpTriangle(image, frag, points[0].first, points[0].second, points[2].first, points[1].first, points[1].second);
+		renderUpTriangle(image, frag, points[0].first, points[0].second, points[1].first, points[2].first, points[2].second);
 	}
 	else {
 		int dx = points[2].first - points[0].first, dy = points[2].second - points[0].second;
@@ -213,6 +239,7 @@ void prepareVert() {
 	ExitOnErr(vertHelper->addIRFile(vertPath));
 	vertHelper->addVector("aPos", floatTy, 3);
 	vertHelper->addVector("color", floatTy, 4);
+	vertHelper->addVector("texCoord", floatTy, 4);
 	vertHelper->addVector("gl_Position", floatTy, 4);
 	vertHelper->startJIT();
 	vertShaderImpl = (void(*)())(vertHelper->getFunction("main"));
@@ -224,9 +251,28 @@ void prepareFrag() {
 	Type *floatTy = Type::getFloatTy(C);
 	ExitOnErr(fragHelper->addIRFile(fragPath));
 	fragHelper->addVector("color", floatTy, 4);
+	fragHelper->addVector("texCoord", floatTy, 4);
 	fragHelper->addVector("FragColor", floatTy, 4);
 	fragHelper->startJIT();
 	fragShaderImpl = (void(*)())(fragHelper->getFunction("main"));
+}
+
+void renderFineTriangle(Image &image, std::vector<std::vector<float>> points, int depth) {
+	if (depth <= 0) {
+		renderTriangle(image, getFragment(points));
+	}
+	else {
+		const std::vector<float> &a = points[0];
+		const std::vector<float> &b = points[1];
+		const std::vector<float> &c = points[2];
+		std::vector<float> ab = { (a[0] + b[0]) / 2, (a[1] + b[1]) / 2 };
+		std::vector<float> ac = { (a[0] + c[0]) / 2, (a[1] + c[1]) / 2 };
+		std::vector<float> bc = { (b[0] + c[0]) / 2, (b[1] + c[1]) / 2 };
+		renderFineTriangle(image, { a, ab, ac }, depth - 1);
+		renderFineTriangle(image, { b, ab, bc }, depth - 1);
+		renderFineTriangle(image, { c, ac, bc }, depth - 1);
+		renderFineTriangle(image, { ab, ac, bc }, depth - 1);
+	}
 }
 
 int main(int argc, const char **argv)
@@ -236,11 +282,12 @@ int main(int argc, const char **argv)
 	prepareFrag();
 	Image image(512, 512);
 	std::vector<std::vector<float>> points = {
-		{ 256, 69, 0 },
-		{ 64, 443, 0 },
-		{ 448, 443, 0 },
+		{ 0, -0.4f * sqrtf(3), 0 },
+		{ -0.8f, 0.4f * sqrtf(3), 0},
+		{ 0.8f, 0.4f * sqrtf(3), 0}
 	};
 	renderTriangle(image, getFragment(points));
+	// renderFineTriangle(image, points, 5);
 	std::ofstream fout(outputPath, std::ios::binary);
 	image.dump(fout);
 	fout.close();

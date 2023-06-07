@@ -93,6 +93,10 @@ void JITHelper::startJIT()
 	if (JITStarted)
 		return;
 	JITStarted = true;
+#ifdef _MSC_VER
+	std::string path = CRPEXT_DIR + std::string("chkstk.obj");
+	JITInstance->addObjectFile(ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(path))));
+#endif
 	ExitOnErr(JITInstance->addIRModule(
 		ThreadSafeModule(std::move(LinkageModule), context)));
 }
