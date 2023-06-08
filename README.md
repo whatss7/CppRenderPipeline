@@ -33,6 +33,8 @@ CppRenderPipeline -vert="<顶点着色器位置>" -frag="<片段着色器位置>
 CppRenderPipeline -vert="../../test/test.vert.ll" -frag="../../frag/frag.vert.ll" -o "result.ppm"
 ```
 
+渲染得到的 ppm 图像可以使用 [OpenSeeIt](https://sourceforge.net/projects/openseeit/) 打开。
+
 ### 注意事项
 
 在顶点着色器中，仅支持以下变量：
@@ -85,6 +87,8 @@ You can render an orange triangle by executing the following command, assuming c
 ```shell
 CppRenderPipeline -vert="../../test/test.vert.ll" -frag="../../frag/frag.vert.ll" -o "result.ppm"
 ```
+
+You can use [OpenSeeIt](https://sourceforge.net/projects/openseeit/) to view the rendered picture.
 
 ### Note
 
