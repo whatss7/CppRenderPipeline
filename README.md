@@ -33,6 +33,26 @@ CppRenderPipeline -vert="<顶点着色器位置>" -frag="<片段着色器位置>
 CppRenderPipeline -vert="../../test/test.vert.ll" -frag="../../frag/frag.vert.ll" -o "result.ppm"
 ```
 
+### 注意事项
+
+在顶点着色器中，仅支持以下变量：
+
+```glsl
+in vec3 aPos;		// 顶点的三维坐标，其中z坐标未被使用
+out vec4 color;		// 传递给片段着色器的中间变量
+out vec4 texCoord;	// 传递给片段着色器的中间变量
+```
+
+在片段着色器中，仅支持以下变量:
+
+```glsl
+in vec4 color;		// 由顶点着色器传递的中间变量
+in vec4 texCoord;	// 由顶点着色器传递的中间变量
+out vec4 FragColor;	// 输出片元的颜色
+```
+
+内置变量中，仅支持 `gl_Position`.
+
 ## English
 
 A simple pipeline which can (and can only) render a triangle.
@@ -66,4 +86,22 @@ You can render an orange triangle by executing the following command, assuming c
 CppRenderPipeline -vert="../../test/test.vert.ll" -frag="../../frag/frag.vert.ll" -o "result.ppm"
 ```
 
-## 
+### Note
+
+Only following variables are supported in vertex shader:
+
+```glsl
+in vec3 aPos;		// 3D position of vertices, in which z component is unused.
+out vec4 color;		// Imtermediate variable passed to fragment shader.
+out vec4 texCoord;	// Imtermediate variable passed to fragment shader.
+```
+
+Only following variables are supported in fragment shader:
+
+```glsl
+in vec4 color;		// Imtermediate variable passed to vertex shader.
+in vec4 texCoord;	// Imtermediate variable passed to vertex shader.
+out vec4 FragColor;	// Color of this fragment.
+```
+
+Only `gl_Position` is available as a builtin variable.
