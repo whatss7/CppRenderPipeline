@@ -23,14 +23,17 @@ CppRenderPipeline -vert="<顶点着色器位置>" -frag="<片段着色器位置>
 
 ### 例子
 
-`test/test.vert` 和 `test/test.frag` 是一对示例着色器。
+在每个文件夹下，均有 5 个文件组成的一个例子，其中：
 
-`test/test.vert.ll` 和 `test/test.frag.ll` 由上述着色器编译得到。
+- `test.vert` 和 `test.frag` 是一对示例着色器。
 
-将工作目录设为 `<项目文件夹>/build/bin` 或 `<项目文件夹>/build/Debug` 后，你可以使用以下指令渲染得到一个橙色的三角形。
+- `test.vert.ll` 和 `test.frag.ll` 由上述着色器编译得到。
+- `result.ppm` 由上述着色器渲染得到。
+
+将工作目录设为 `<项目文件夹>/build/bin` 或 `<项目文件夹>/build/Debug` 后，你可以使用以下指令渲染得到一个橙色的三角形。对其他例子，可以使用相似的指令进行渲染。
 
 ```shell
-CppRenderPipeline -vert="../../test/test.vert.ll" -frag="../../frag/frag.vert.ll" -o "result.ppm"
+CppRenderPipeline -vert="../../test/easy/code.vert.ll" -frag="../../test/easy/code.frag.ll" -o "result.ppm"
 ```
 
 渲染得到的 ppm 图像可以使用 [OpenSeeIt](https://sourceforge.net/projects/openseeit/) 打开。
@@ -78,14 +81,17 @@ CppRenderPipeline -vert="<path-to-vertex-shader>" -frag="<path-to-fragment-shade
 
 ### Example
 
-`test/test.vert` and `test/test.frag` are a pair of example shaders.
+Each folder in `test` folder contains an example consisting of 5 files.
 
-`test/test.vert.ll` and `test/test.frag.ll` are compiled from the above shaders.
+- `test/test.vert` and `test/test.frag` are a pair of example shaders.
 
-You can render an orange triangle by executing the following command, assuming current working directory is `<project-dir>/build/bin` or `<project-dir>/build/Debug`.
+- `test/test.vert.ll` and `test/test.frag.ll` are compiled from the above shaders.
+- `result.ppm` are rendered using the above shaders.
+
+You can render an orange triangle by executing the following command, assuming current working directory is `<project-dir>/build/bin` or `<project-dir>/build/Debug`. Other examples can be rendered by similar ways.
 
 ```shell
-CppRenderPipeline -vert="../../test/test.vert.ll" -frag="../../frag/frag.vert.ll" -o "result.ppm"
+CppRenderPipeline -vert="../../test/easy/code.vert.ll" -frag="../../test/easy/code.frag.ll" -o "result.ppm"
 ```
 
 You can use [OpenSeeIt](https://sourceforge.net/projects/openseeit/) to view the rendered picture.
