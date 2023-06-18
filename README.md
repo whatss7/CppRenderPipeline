@@ -88,7 +88,7 @@ Each folder in `test` folder contains an example consisting of 5 files.
 - `test/test.vert.ll` and `test/test.frag.ll` are compiled from the above shaders.
 - `result.ppm` are rendered using the above shaders.
 
-You can render an orange triangle by executing the following command, assuming current working directory is `<project-dir>/build/bin` or `<project-dir>/build/Debug`. Other examples can be rendered by similar ways.
+You can render an orange triangle by executing the following command, assuming current working directory is `<project-dir>/build/bin` or `<project-dir>/build/Debug`. Other examples can be rendered in similar ways.
 
 ```shell
 CppRenderPipeline -vert="../../test/easy/code.vert.ll" -frag="../../test/easy/code.frag.ll" -o "result.ppm"
